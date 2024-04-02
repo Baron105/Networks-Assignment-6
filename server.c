@@ -4,7 +4,8 @@
 #include <sys/socket.h>
 #include <linux/if_packet.h>
 #include <net/ethernet.h>
-#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 
@@ -48,7 +49,7 @@ int main() {
         }
 
         // Print the payload of the received packet
-        printf("Received packet: %s\n", buffer + sizeof(struct ethhdr) + sizeof(struct iphdr) + sizeof(struct tcphdr));
+        printf("Received packet: %ld\n", strlen(buffer));
     }
 
     close(sockfd);
