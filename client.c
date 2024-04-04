@@ -180,7 +180,7 @@ int main() {
         // making the Ethernet header
         struct ethhdr *eth = (struct ethhdr *)buffer;
         memset(eth->h_dest, 0xFF, ETH_ALEN); // Broadcast MAC address
-        memcpy(eth->h_source, 0xFF, ETH_ALEN); // Source MAC address
+        memcpy(eth->h_source, (unsigned char[]){0x00, 0x08, 0xA1, 0x8E, 0xE4, 0x52}, ETH_ALEN); // Source MAC address
         eth->h_proto = htons(ETH_P_IP); // EtherType for IP
 
         // making the IP header
