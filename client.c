@@ -119,13 +119,14 @@ int main() {
     fd_set fd ;
     FD_ZERO(&fd);
     FD_SET(sockfd, &fd);
-    FD_SET(stdin, &fd);
+    FD_SET(0, &fd);
 
     struct timeval tv;
     tv.tv_sec = 0;
     tv.tv_usec = 100000;
 
-        
+    printf("Enter the query: (getIP N <domain-1> <domain-2> <domain-3> … <domain-N>) or EXIT\n");
+
     
     while(1)
     {
@@ -217,13 +218,13 @@ int main() {
 
         else 
         {
-            if(FD_ISSET(stdin, &read_fd))
+            if(FD_ISSET(0, &read_fd))
             {
                 // asking user for query input
-                printf("Enter the query: (getIP N <domain-1> <domain-2> <domain-3> … <domain-N>) or EXIT\n");
-                char query[1000];
+                char query[1000] = {'\0'};
 
                 scanf("%[^\n]", query);
+                fflush(stdin);
 
                 if(strncmp(query, "EXIT", 4) == 0)
                 {
@@ -236,6 +237,7 @@ int main() {
                 if(strncmp(query, "getIP", 5) != 0)
                 {
                     printf("Invalid format\n");
+                    memset(query, '\0', sizeof(query));
                     continue;
                 }
 
@@ -246,12 +248,13 @@ int main() {
                 if(n > 8)
                 {
                     printf("N should be less than or equal to 8\n");
+                    memset(query, '\0', sizeof(query));
                     continue;
                 }
 
                 // checking if actual number of domains are equal to N
                 int count = 0;
-                for(int i = 0; i < strlen(query); i++)
+                for(int i = 7; i < strlen(query); i++)
                 {
                     if(query[i] == ' ')
                     {
@@ -261,7 +264,8 @@ int main() {
 
                 if(count != n)
                 {
-                    printf("Number of domains should be equal to N\n");
+                    printf("Number of domains should be equal to %d\n", n);
+                    memset(query, '\0', sizeof(query));
                     continue;
                 }
 
@@ -317,6 +321,7 @@ int main() {
                 if(flag == 1)
                 {
                     printf("Invalid domain name\n");
+                    memset(query, '\0', sizeof(query));
                     continue;
                 }
 
@@ -416,7 +421,7 @@ int main() {
                 printf("Sent packet of length %d\n", len);
                 // add it in the page query table
                 // find the first empty slot
-                int t = 0 ;
+                t = 0 ;
                 while(page_table[t].alloted == 1)
                 {
                     t++;
@@ -424,6 +429,7 @@ int main() {
                 if(t>=20)
                 {
                     printf("No empty slot in the page table\n");
+                    memset(query, '\0', sizeof(query));
                     continue;
                 }
 
