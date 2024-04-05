@@ -11,7 +11,8 @@
 
 #define BUFFER_SIZE 65536
 
-int main() {
+int main()
+{
     int sockfd;
     struct sockaddr_ll sa;
     char buffer[BUFFER_SIZE];
@@ -19,7 +20,8 @@ int main() {
 
     // Create a raw socket
     sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-    if (sockfd == -1) {
+    if (sockfd == -1)
+    {
         perror("socket");
         exit(EXIT_FAILURE);
     }
@@ -29,21 +31,25 @@ int main() {
     sa.sll_family = AF_PACKET;
     sa.sll_protocol = htons(ETH_P_ALL);
     sa.sll_ifindex = if_nametoindex("eth0"); // Replace "eth0" with your interface name
-    if (sa.sll_ifindex == 0) {
+    if (sa.sll_ifindex == 0)
+    {
         perror("if_nametoindex");
         exit(EXIT_FAILURE);
     }
 
     // Bind the socket to the interface
-    if (bind(sockfd, (struct sockaddr *)&sa, sizeof(struct sockaddr_ll)) == -1) {
+    if (bind(sockfd, (struct sockaddr *)&sa, sizeof(struct sockaddr_ll)) == -1)
+    {
         perror("bind");
         exit(EXIT_FAILURE);
     }
 
     // Receive packets
-    while (1) {
+    while (1)
+    {
         packet_len = recv(sockfd, buffer, BUFFER_SIZE, 0);
-        if (packet_len == -1) {
+        if (packet_len == -1)
+        {
             perror("recv");
             exit(EXIT_FAILURE);
         }
