@@ -11,10 +11,22 @@
 
 #define BUFFER_SIZE 65536
 
+typedef struct page_table_entry
+{
+    char query[1000];
+    int id ;
+    int tries;
+}page_table_entry;
+
+page_table_entry page_table[20];
+
 int main() {
+
+    memset(page_table, 0, sizeof(page_table));
     int sockfd;
     struct sockaddr_ll sa;
-    char buffer[BUFFER_SIZE];
+    char sendbuffer[BUFFER_SIZE] = {'\0'};
+    char recvbuffer[BUFFER_SIZE] = {'\0'};
     ssize_t packet_len;
 
     // Create a raw socket
@@ -85,119 +97,235 @@ int main() {
     // printf("Sent packet of length %zd\n", packet_len);
 
     // close(sockfd);
+
+    int id = 1;
+
+    fd_set fd ;
+    FD_ZERO(&fd);
+    FD_SET(sockfd, &fd);
+    FD_SET(stdin, &fd);
+
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+
+        
     
     while(1)
     {
-        // asking user for query input
-        printf("Enter the query: (getIP N <domain-1> <domain-2> <domain-3> … <domain-N>) or EXIT\n");
-        char query[1000];
+        fd_set read_fd = fd;
+        int ret = select(sockfd+1, &read_fd, NULL, NULL, &tv);
 
-        fscanf(stdin, "%s", query);
-
-        if(strncmp(query, "EXIT", 4) == 0)
+        if(ret == -1)
         {
-            // close the socket and exit
-            close(sockfd);
-            return 0;
+            perror("select");
+            exit(EXIT_FAILURE);
+        }
+        else if(ret == 0)
+        {
+            // timeout
         }
 
-        // checking if the query is valid
-        if(strncmp(query, "getIP", 5) != 0)
+        else 
         {
-            printf("Invalid format\n");
-            continue;
-        }
-
-        // checking value of N
-        int n;
-        sscanf(query, "getIP %d", &n);
-
-        if(n > 8)
-        {
-            printf("N should be less than or equal to 8\n");
-            continue;
-        }
-
-        // checking if actual number of domains are equal to N
-        int count = 0;
-        for(int i = 0; i < strlen(query); i++)
-        {
-            if(query[i] == ' ')
+            if(FD_ISSET(stdin, &read_fd))
             {
-                count++;
-            }
-        }
+                // asking user for query input
+                printf("Enter the query: (getIP N <domain-1> <domain-2> <domain-3> … <domain-N>) or EXIT\n");
+                char query[1000];
 
-        if(count != n)
-        {
-            printf("Number of domains should be equal to N\n");
-            continue;
-        }
+                scanf("%[^\n]", query);
 
-        // check if the has only alphanumeric characters and dots and hyphens
-        int flag = 0;
-        for(int i = 0; i < strlen(query); i++)
-        {
-            if((query[i] >= 'a' && query[i] <= 'z') || (query[i] >= 'A' && query[i] <= 'Z') || (query[i] >= '0' && query[i] <= '9') || query[i] == '.' || query[i] == '-' || query[i] == ' ')
-            {
-                if(query[i]=='-')
+                if(strncmp(query, "EXIT", 4) == 0)
                 {
-                    if(i==0)
+                    // close the socket and exit
+                    close(sockfd);
+                    return 0;
+                }
+
+                // checking if the query is valid
+                if(strncmp(query, "getIP", 5) != 0)
+                {
+                    printf("Invalid format\n");
+                    continue;
+                }
+
+                // checking value of N
+                int n;
+                sscanf(query, "getIP %d", &n);
+
+                if(n > 8)
+                {
+                    printf("N should be less than or equal to 8\n");
+                    continue;
+                }
+
+                // checking if actual number of domains are equal to N
+                int count = 0;
+                for(int i = 0; i < strlen(query); i++)
+                {
+                    if(query[i] == ' ')
+                    {
+                        count++;
+                    }
+                }
+
+                if(count != n)
+                {
+                    printf("Number of domains should be equal to N\n");
+                    continue;
+                }
+
+                // check if the has only alphanumeric characters and dots and hyphens
+                int flag = 0;
+                for(int i = 0; i < strlen(query); i++)
+                {
+                    if((query[i] >= 'a' && query[i] <= 'z') || (query[i] >= 'A' && query[i] <= 'Z') || (query[i] >= '0' && query[i] <= '9') || query[i] == '.' || query[i] == '-' || query[i] == ' ')
+                    {
+                        if(query[i]=='-')
+                        {
+                            if(i==0)
+                            {
+                                flag = 1;
+                                break;
+                            }
+                            else 
+                            {
+                                if(query[i-1]=='-'|| query[i-1]==' ')
+                                {
+                                    flag = 1;
+                                    break;
+                                
+                                }
+                            }
+                        }
+                        continue;
+                    }
+                    else
                     {
                         flag = 1;
                         break;
                     }
-                    else 
+                }
+
+                if(flag == 1)
+                {
+                    printf("Invalid domain name\n");
+                    continue;
+                }
+
+                int j = 15;
+                // fill the first 16 char with the id 
+                while(j>=0)
+                {
+                    simDNSquery[j] = id%2 + '0';
+                    id/=2;
+                    j--;
+                }
+                // it is a query message
+                simDNSquery[16] = '0' ;
+
+                j = 19;
+                int temp = n;
+                while(j>16)
+                {
+                    simDNSquery[j] = '0' + temp%2;
+                    temp/=2;
+                    j--;
+                }
+                j=20;
+                // find length of each domain and the domain 
+                int t=7;
+                while(n--)
+                {
+                    j--;
+                    while(query[t]==' ' || query[t]=='\0')
                     {
-                        if(query[i-1]=='-'|| query[i-1]==' ')
-                        {
-                            flag = 1;
-                            break;
-                        
-                        }
+                        t++;
+                    }
+                    int len = 0;
+                    int start = t;
+
+                    while(query[t]!=' ' && query[t]!='\0')
+                    {
+                        len++;
+                        t++;
+                    }
+
+                    // put the len in the 4 bits from j+1 to j+4
+                    int temp  = len;
+                    int m = 4;
+                    while(m)
+                    {
+                        simDNSquery[j+m] = '0' + temp%2;
+                        temp/=2;
+                        m--;
+                    }
+
+                    j = j+5;
+
+                    // put the domain in the message
+                    for(int i = start; i<start+len; i++)
+                    {
+                        simDNSquery[j] = query[i];
+                        j++;
                     }
                 }
-                continue;
+
+
+                // creating the Ethernet header
+                struct ethhdr *eth = (struct ethhdr *)sendbuffer;
+                memset(eth->h_dest, 0xFF, ETH_ALEN); // Broadcast MAC address
+                memcpy(eth->h_source, (unsigned char[]){0x3c, 0xa6, 0xf6, 0x40, 0xc3, 0x6d}, ETH_ALEN); // Source MAC address
+                eth->h_proto = htons(ETH_P_IP); // EtherType for IP
+
+                // creating the IP header
+                struct iphdr *ip = (struct iphdr *)(sendbuffer + sizeof(struct ethhdr));
+                ip->ihl = 5;
+                ip->version = 4;
+                ip->tos = 0;
+                ip->tot_len = htons(sizeof(struct iphdr) + strlen(simDNSquery));
+                ip->id = htons(54321);
+                ip->frag_off = 0;
+                ip->ttl = 8;
+                ip->protocol = 254;
+                ip->check = 0; 
+                ip->saddr = inet_addr("127.0.0.1");
+                ip->daddr = inet_addr("127.0.0.1");
+
+                // adding the simDNSquery to the buffer
+                char *data = (char *)(sendbuffer + sizeof(struct ethhdr) + sizeof(struct iphdr));
+                strcpy(data, simDNSquery);
+
+
+                // sending the packet
+                int len = sendto(sockfd,sendbuffer, sizeof(struct ethhdr) + sizeof(struct iphdr) + strlen(simDNSquery), 0, (struct sockaddr *)&sa, sizeof(struct sockaddr_ll));
+
+                if(len == -1)
+                {
+                    perror("sendto");
+                    exit(EXIT_FAILURE);
+                }
+
+                printf("Sent packet of length %d\n", len);
+                id++;
+
+                // add it in the page query table
+
             }
-            else
+
+            if(FD_ISSET(sockfd, &read_fd))
             {
-                flag = 1;
-                break;
+                // received a reponse
+
             }
         }
+        
 
-        if(flag == 1)
-        {
-            printf("Invalid domain name\n");
-            continue;
-        }
 
-        char simDNSquery[1000] = {'\0'};
-        // change later
-
-        char buffer[2000] = {'\0'};
-
-        // making the Ethernet header
-        struct ethhdr *eth = (struct ethhdr *)buffer;
-        memset(eth->h_dest, 0xFF, ETH_ALEN); // Broadcast MAC address
-        memcpy(eth->h_source, (unsigned char[]){0x00, 0x08, 0xA1, 0x8E, 0xE4, 0x52}, ETH_ALEN); // Source MAC address
-        eth->h_proto = htons(ETH_P_IP); // EtherType for IP
-
-        // making the IP header
-        struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
-        ip->ihl = 5;
-        ip->version = 4;
-        ip->tos = 0;
-        ip->tot_len = htons(sizeof(struct iphdr) + strlen(simDNSquery));
-        ip->id = htons(54321);
-        ip->frag_off = 0;
-        ip->ttl = 64;
-        ip->protocol = IPPROTO_TCP;
-        ip->check = 0;
-        ip->saddr = inet_addr("127.0.0.1");
-        ip->daddr = inet_addr("127.0.0.1");
 
         
     }
+
 
 }
