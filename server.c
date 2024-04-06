@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <netdb.h>
 #include <sys/socket.h>
 #include <linux/if_packet.h>
 #include <net/ethernet.h>
@@ -84,7 +85,7 @@ int main()
             j++;
         }
 
-        printf("%s\n", simDNSquery);
+        // printf("%s\n", simDNSquery);
 
         int qid = 0;
 
@@ -106,7 +107,7 @@ int main()
         n = n*2+simDNSquery[19]-'0';
         n++;
 
-        int j = 20;
+        j = 20;
 
         long ip[n+1];
 
@@ -132,22 +133,20 @@ int main()
             // get the ip of the domain
             struct hostent *host;
             struct in_addr **addr_list;
-            host = gethostbyname(domain);
-            addr_list = (struct in_addr **)host->h_addr_list;
-            long ip_addr = 0;
             int flag = 0;
-            
-            // take the first ip in the list id exists else set a flag
-            if(addr_list[0] != NULL)
-            {
-                ip_addr = ntohl(addr_list[0]->s_addr);
-            }
-            else
+            host = gethostbyname(domain);
+            long ip_addr;
+            if (host == NULL)
             {
                 flag = 1;
             }
+            else
+            {
+                addr_list = (struct in_addr **)host->h_addr_list;
+                ip_addr = ntohl(addr_list[0]->s_addr);
+            }
 
-            // put the ip in the ip array
+            // put the ip in the ip array, if the domain is not found put -1
             ip[t] = (flag?-1:ip_addr);
 
         }
@@ -168,7 +167,7 @@ int main()
         simDNSresponse[16] = '1';
 
         j = 19;
-        int temp = n;
+        int temp = n-1;
         while(j>16)
         {
             simDNSresponse[j] = '0' + temp%2;
@@ -185,7 +184,7 @@ int main()
                 j++;
                 for(int e=31;e>=0;e--)
                 {
-                    simDNSresponse[j+e] = '0';
+                    simDNSresponse[j+e] = '1';
                 
                 }
                 j+=32;
@@ -214,11 +213,11 @@ int main()
         // creating the ethernet header
         struct ethhdr *eth_header = (struct ethhdr *)buffer;
         memset(eth_header->h_dest, 0xff, ETH_ALEN);
-        memcpy(eth->h_source, (unsigned char[]){0x3c, 0xa6, 0xf6, 0x40, 0xc3, 0x6d}, ETH_ALEN); // Source MAC address
+        memcpy(eth_header->h_source, (unsigned char[]){0x3c, 0xa6, 0xf6, 0x40, 0xc3, 0x6d}, ETH_ALEN); // Source MAC address
         eth_header->h_proto = htons(ETH_P_IP);
 
         // creating the ip header
-        struct iphdr *ip_header = (struct iphdr *)(buffer + sizeof(struct ethhdr));
+        ip_header = (struct iphdr *)(buffer + sizeof(struct ethhdr));
         ip_header->ihl = 5;
         ip_header->version = 4;
         ip_header->tos = 0;
@@ -235,11 +234,14 @@ int main()
         strcpy(data,simDNSresponse);
 
         // send the response
+        // printf("Sending response %s\n", simDNSresponse);
         len = sendto(sockfd, buffer, sizeof(struct ethhdr) + sizeof(struct iphdr) + strlen(simDNSresponse), 0, (struct sockaddr *)&sa, sizeof(struct sockaddr_ll));
         if (len == -1) {
             perror("sendto");
             exit(EXIT_FAILURE);
         }
+        memset(buffer,'\0',sizeof(buffer));
+        memset(simDNSresponse,'\0',sizeof(simDNSresponse));
     }
 
     

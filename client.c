@@ -62,58 +62,6 @@ int main()
 
     char simDNSquery[1000] = {'\0'};
 
-    // Construct the Ethernet header
-    // struct ethhdr *eth = (struct ethhdr *)buffer;
-    // memset(eth->h_dest, 0xFF, ETH_ALEN); // Broadcast MAC address
-    // memcpy(eth->h_source, (unsigned char[]){0x00, 0x08, 0xA1, 0x8E, 0xE4, 0x52}, ETH_ALEN); // Source MAC address
-    // eth->h_proto = htons(ETH_P_IP); // EtherType for IP
-
-    // Construct the IP header
-    // struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
-    // ip->ihl = 5;
-    // ip->version = 4;
-    // ip->tos = 0;
-    // ip->tot_len = htons(sizeof(struct iphdr) + sizeof(struct tcphdr) + strlen("Hello"));
-    // ip->id = htons(54321);
-    // ip->frag_off = 0;
-    // ip->ttl = 64;
-    // ip->protocol = IPPROTO_TCP;
-    // ip->check = 0; // Will be filled in by the kernel
-    // ip->saddr = inet_addr("192.168.1.1"); // Source IP address
-    // ip->daddr = inet_addr("192.168.1.2"); // Destination IP address
-
-    // Construct the TCP header
-    // struct tcphdr *tcp = (struct tcphdr *)(buffer + sizeof(struct ethhdr) + sizeof(struct iphdr));
-    // tcp->source = htons(12345); // Source port
-    // tcp->dest = htons(12345); // Destination port
-    // tcp->seq = htonl(1); // Sequence number
-    // tcp->ack_seq = 0; // Acknowledgment number
-    // tcp->doff = 5; // Data offset
-    // tcp->fin = 0;
-    // tcp->syn = 0;
-    // tcp->rst = 0;
-    // tcp->psh = 0;
-    // tcp->ack = 0;
-    // tcp->urg = 0;
-    // tcp->window = htons(5840); // Window size
-    // tcp->check = 0; // Will be filled in by the kernel
-    // tcp->urg_ptr = 0;
-
-    // Add the "Hello" message as payload
-    // char *data = (char *)(buffer + sizeof(struct ethhdr) + sizeof(struct iphdr) + sizeof(struct tcphdr));
-    // strcpy(data, "Hello");
-
-    // // Send the packet
-    // packet_len = sendto(sockfd, buffer, sizeof(struct ethhdr) + sizeof(struct iphdr) + sizeof(struct tcphdr) + strlen("Hello"), 0, (struct sockaddr *)&sa, sizeof(struct sockaddr_ll));
-    // if (packet_len == -1) {
-    //     perror("sendto");
-    //     exit(EXIT_FAILURE);
-    // }
-
-    // printf("Sent packet of length %zd\n", packet_len);
-
-    // close(sockfd);
-
     int id = 1;
 
     fd_set fd;
@@ -122,8 +70,8 @@ int main()
     FD_SET(0, &fd);
 
     struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = 100000;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
 
     printf("Enter the query: (getIP N <domain-1> <domain-2> <domain-3> … <domain-N>) or EXIT\n");
 
@@ -141,8 +89,8 @@ int main()
         {
 
             // reset the timer
-            tv.tv_sec = 0;
-            tv.tv_usec = 100000;
+            tv.tv_sec = 1;
+            tv.tv_usec = 0;
 
             for (int i = 0; i < 20; i++)
             {
@@ -218,7 +166,7 @@ int main()
                 // asking user for query input
                 char query[1000] = {'\0'};
 
-                scanf("%[^\n]", query);
+                scanf("\n%[^\n]", query);
                 fflush(stdin);
 
                 if (strncmp(query, "EXIT", 4) == 0)
@@ -240,6 +188,12 @@ int main()
                 int n;
                 sscanf(query, "getIP %d", &n);
 
+                if(n<1) 
+                {
+                    printf("Invalid format\n");
+                    memset(query, '\0', sizeof(query));
+                    continue;
+                }
                 if (n > 8)
                 {
                     printf("N should be less than or equal to 8\n");
@@ -249,9 +203,9 @@ int main()
 
                 // checking if actual number of domains are equal to N
                 int count = 0;
-                for (int i = 7; i < strlen(query); i++)
+                for (int i = 7; i < strlen(query) - 1; i++)
                 {
-                    if (query[i] == ' ')
+                    if (query[i] == ' ' && query[i + 1] != ' ')
                     {
                         count++;
                     }
@@ -320,10 +274,11 @@ int main()
 
                 int j = 15;
                 // fill the first 16 char with the id
+                int tempid = id;
                 while (j >= 0)
                 {
-                    simDNSquery[j] = id % 2 + '0';
-                    id /= 2;
+                    simDNSquery[j] = tempid % 2 + '0';
+                    tempid /= 2;
                     j--;
                 }
                 // it is a query message
@@ -458,7 +413,7 @@ int main()
 
                     if (ip->saddr != inet_addr("127.0.0.1"))
                     {
-                        printf("Invalid source IP address\n");
+                        // printf("Invalid source IP address\n");
                         continue;
                     }
 
@@ -483,6 +438,8 @@ int main()
                         continue;
                     }
 
+                    // printf("Received data : %s\n", data);
+
                     // check the id
                     int responseid = 0;
                     for (int i = 0; i < 16; i++)
@@ -490,10 +447,13 @@ int main()
                         responseid = responseid * 2 + (data[i] - '0');
                     }
 
+                    // printf("id : %d\n", responseid);
+
                     // check if the id is valid in the table
                     int t = 0;
                     while (t < 20)
                     {
+                        // printf("%d %d %d\n", t, page_table[t].alloted, page_table[t].id);
                         if (page_table[t].alloted == 1 && page_table[t].id == responseid)
                         {
                             break;
@@ -507,7 +467,7 @@ int main()
                         continue;
                     }
 
-                    printf("Query ID : %d\n", responseid);
+                    // printf("Query ID : %d\n", responseid);
 
                     // check the number of ip addresses
                     int n = 0;
@@ -520,20 +480,19 @@ int main()
 
                     int j = 20;
                     int k = 20;
+                    int length;
 
                     while (n--)
                     {
-                        // get the domain name from the table entry t
-
-                        int len = 0;
+                        length = 0;
                         // store the value in bits j to j+3 in len
                         for (int r = 0; r < 4; r++)
                         {
-                            len = len * 2 + page_table[t].query[j] - '0';
+                            length = length * 2 + page_table[t].query[j] - '0';
                             j++;
                         }
 
-                        int temp = j + len;
+                        int temp = j + length;
                         while (j < temp)
                         {
                             printf("%c", page_table[t].query[j]);
@@ -564,14 +523,13 @@ int main()
                         }
 
                         // print the ip in the required format
-                        printf("%ld.%ld.%ld.%ld\n", (ip >> 24) & 256, (ip >> 16) & 256, (ip >> 8) & 256, ip & 256);
-
-                        // delete the entry from the page table
-                        memset(page_table[t].query, 0, sizeof(page_table[t].query));
-                        page_table[t].alloted = 0;
-                        page_table[t].id = 0;
-                        page_table[t].tries = 0;
+                        printf("%ld.%ld.%ld.%ld\n", (ip >> 24) & 255, (ip >> 16) & 255, (ip >> 8) & 255, ip & 255);
                     }
+                    // delete the entry from the page table
+                    memset(page_table[t].query, 0, sizeof(page_table[t].query));
+                    page_table[t].alloted = 0;
+                    page_table[t].id = 0;
+                    page_table[t].tries = 0;
                 }
             }
         }
