@@ -261,7 +261,7 @@ int main() {
 
                 if(count != n)
                 {
-                    printf("Number of domains should be equal to N\n");
+                    printf("Number of domains should be equal to %d\n",n);
                     continue;
                 }
 
