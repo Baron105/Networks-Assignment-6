@@ -259,8 +259,7 @@ int main()
 
                 if (count != n)
                 {
-                    printf("Number of domains should be equal to %d\n", n);
-                    memset(query, '\0', sizeof(query));
+                    printf("Number of domains should be equal to %d\n",n);
                     continue;
                 }
 
