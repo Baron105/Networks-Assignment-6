@@ -188,7 +188,7 @@ int main()
                 int n;
                 sscanf(query, "getIP %d", &n);
 
-                if(n<1) 
+                if (n < 1)
                 {
                     printf("Invalid format\n");
                     memset(query, '\0', sizeof(query));
@@ -213,7 +213,7 @@ int main()
 
                 if (count != n)
                 {
-                    printf("Number of domains should be equal to %d\n",n);
+                    printf("Number of domains should be equal to %d\n", n);
                     continue;
                 }
 
