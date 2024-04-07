@@ -8,9 +8,23 @@
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
+#include <net/if.h>
 #include <unistd.h>
+#include <limits.h>
 
 #define BUFFER_SIZE 65536
+#define P 0.5
+
+int dropMessage(float p)
+{
+
+    // generate a random number between 0 and 1, if it is less than p, return 1, else return 0
+    double r = ((double)rand()) / INT_MAX;
+    if (r < p)
+        return 1;
+    else
+        return 0;
+}
 
 int main()
 {
@@ -31,7 +45,7 @@ int main()
     memset(&sa, 0, sizeof(struct sockaddr_ll));
     sa.sll_family = AF_PACKET;
     sa.sll_protocol = htons(ETH_P_ALL);
-    sa.sll_ifindex = if_nametoindex("eth0"); // Replace "eth0" with your interface name
+    sa.sll_ifindex = if_nametoindex("eth0"); 
     if (sa.sll_ifindex == 0)
     {
         perror("if_nametoindex");
@@ -45,6 +59,10 @@ int main()
         exit(EXIT_FAILURE);
     }
 
+    printf("Enter the server mac address: (xx:xx:xx:xx:xx:xx) ");
+    unsigned char src_mac[6];
+    scanf("%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &src_mac[0], &src_mac[1], &src_mac[2], &src_mac[3], &src_mac[4], &src_mac[5]);
+
     // receive packets on this socket
     while (1)
     {
@@ -54,6 +72,12 @@ int main()
             perror("recvfrom");
             exit(EXIT_FAILURE);
         }
+
+        // extract the source mac address from the ethernet header
+        struct ethhdr *eth_head = (struct ethhdr *)buffer;
+        unsigned char *src_mac = eth_head->h_source;
+
+
 
         // check the ip header
         // check if destination ip address matches the ip address of the server
@@ -86,8 +110,6 @@ int main()
             j++;
         }
 
-        // printf("%s\n", simDNSquery);
-
         int qid = 0;
 
         // extract the query id
@@ -98,6 +120,11 @@ int main()
 
         if (simDNSquery[16] == '1')
         {
+            continue;
+        }
+        if(dropMessage(P))
+        {
+            printf("Dropped Incoming message\n");
             continue;
         }
 
@@ -209,8 +236,9 @@ int main()
 
         // creating the ethernet header
         struct ethhdr *eth_header = (struct ethhdr *)buffer;
-        memset(eth_header->h_dest, 0xff, ETH_ALEN);
-        memcpy(eth_header->h_source, (unsigned char[]){0x3c, 0xa6, 0xf6, 0x40, 0xc3, 0x6d}, ETH_ALEN); // Source MAC address
+        // set the destination MAC address as the source MAC address of the incoming packet
+        memcpy(eth_header->h_dest, src_mac, ETH_ALEN);
+        memcpy(eth_header->h_source, src_mac, ETH_ALEN);
         eth_header->h_proto = htons(ETH_P_IP);
 
         // creating the ip header
@@ -218,7 +246,7 @@ int main()
         ip_header->ihl = 5;
         ip_header->version = 4;
         ip_header->tos = 0;
-        ip_header->tot_len = htons(sizeof(struct iphdr) + sizeof(struct tcphdr) + strlen(simDNSresponse));
+        ip_header->tot_len = htons(sizeof(struct iphdr)+ strlen(simDNSresponse));
         ip_header->id = htons(0);
         ip_header->frag_off = 0;
         ip_header->ttl = 8;
@@ -231,7 +259,6 @@ int main()
         strcpy(data, simDNSresponse);
 
         // send the response
-        // printf("Sending response %s\n", simDNSresponse);
         len = sendto(sockfd, buffer, sizeof(struct ethhdr) + sizeof(struct iphdr) + strlen(simDNSresponse), 0, (struct sockaddr *)&sa, sizeof(struct sockaddr_ll));
         if (len == -1)
         {

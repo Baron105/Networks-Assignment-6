@@ -10,6 +10,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/select.h>
+#include <limits.h>
+#include <net/if.h>
+#include <sys/types.h>
+
 
 #define BUFFER_SIZE 65536
 
@@ -62,7 +67,7 @@ int main()
 
     char simDNSquery[1000] = {'\0'};
 
-    int id = 1;
+    int id = 1001;
 
     fd_set fd;
     FD_ZERO(&fd);
@@ -72,6 +77,15 @@ int main()
     struct timeval tv;
     tv.tv_sec = 1;
     tv.tv_usec = 0;
+
+    printf("Enter the MAC address of the server: (xx:xx:xx:xx:xx:xx)\n");
+
+    // get the MAC address of the server
+    char mac[18] = {'\0'};
+    scanf("%s", mac);
+    // put this in an unsigned char array
+    unsigned char mac_addr[6];
+    sscanf(mac, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &mac_addr[0], &mac_addr[1], &mac_addr[2], &mac_addr[3], &mac_addr[4], &mac_addr[5]);
 
     printf("Enter the query: (getIP N <domain-1> <domain-2> <domain-3> … <domain-N>) or EXIT\n");
 
@@ -121,8 +135,9 @@ int main()
                         memset(sendbuffer, 0, sizeof(sendbuffer));
 
                         // creating the Ethernet header
-                        struct ethhdr *eth = (struct ethhdr *)sendbuffer;
-                        memset(eth->h_dest, 0xFF, ETH_ALEN);                                                    // Broadcast MAC address
+                        struct ethhdr *eth = (struct ethhdr *)sendbuffer;  
+                        // set the destination MAC address in mac
+                        memcpy(eth->h_dest, mac_addr, ETH_ALEN);                                                    // Destination MAC address
                         memcpy(eth->h_source, (unsigned char[]){0x3c, 0xa6, 0xf6, 0x40, 0xc3, 0x6d}, ETH_ALEN); // Source MAC address
                         eth->h_proto = htons(ETH_P_IP);                                                         // EtherType for IP
 
@@ -145,6 +160,7 @@ int main()
                         strcpy(data, page_table[i].query);
 
                         // sending the packet
+                        printf("Retransmitting packet with query id : %d\n", page_table[i].id);
                         int len = sendto(sockfd, sendbuffer, sizeof(struct ethhdr) + sizeof(struct iphdr) + strlen(page_table[i].query), 0, (struct sockaddr *)&sa, sizeof(struct sockaddr_ll));
 
                         if (len == -1)
@@ -333,7 +349,7 @@ int main()
 
                 // creating the Ethernet header
                 struct ethhdr *eth = (struct ethhdr *)sendbuffer;
-                memset(eth->h_dest, 0xFF, ETH_ALEN);                                                    // Broadcast MAC address
+                memcpy(eth->h_dest, mac_addr, ETH_ALEN);                                                    // Destination MAC address
                 memcpy(eth->h_source, (unsigned char[]){0x3c, 0xa6, 0xf6, 0x40, 0xc3, 0x6d}, ETH_ALEN); // Source MAC address
                 eth->h_proto = htons(ETH_P_IP);                                                         // EtherType for IP
 
