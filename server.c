@@ -75,7 +75,7 @@ int main()
 
         // extract the source mac address from the ethernet header
         struct ethhdr *eth_head = (struct ethhdr *)buffer;
-        unsigned char *src_mac = eth_head->h_source;
+        unsigned char *dest_mac = eth_head->h_source;
 
 
 
@@ -237,7 +237,7 @@ int main()
         // creating the ethernet header
         struct ethhdr *eth_header = (struct ethhdr *)buffer;
         // set the destination MAC address as the source MAC address of the incoming packet
-        memcpy(eth_header->h_dest, src_mac, ETH_ALEN);
+        memcpy(eth_header->h_dest, dest_mac, ETH_ALEN);
         memcpy(eth_header->h_source, src_mac, ETH_ALEN);
         eth_header->h_proto = htons(ETH_P_IP);
 
