@@ -6,19 +6,20 @@
 #include <linux/if_packet.h>
 #include <net/ethernet.h>
 #include <netinet/ip.h>
-#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <net/if.h>
 #include <unistd.h>
+#include <signal.h>
 #include <limits.h>
 
+// buffer size of 2^16
 #define BUFFER_SIZE 65536
+// probability of dropping a message
 #define P 0.5
 
+// generate a random number between 0 and 1, if it is less than p, return 1, else return 0
 int dropMessage(float p)
 {
-
-    // generate a random number between 0 and 1, if it is less than p, return 1, else return 0
     double r = ((double)rand()) / INT_MAX;
     if (r < p)
         return 1;
@@ -26,14 +27,35 @@ int dropMessage(float p)
         return 0;
 }
 
+int sockfd;
+
+// signal handler for SIGINT and SIGTSTP
+void sighand(int signum)
+{
+    if (signum == SIGINT)
+    {
+        printf("You pressed Ctrl+C, Exiting\n");
+        close(sockfd);
+        exit(1);
+    }
+    else if (signum == SIGTSTP)
+    {
+        printf("You pressed Ctrl+Z, Exiting\n");
+        close(sockfd);
+        exit(1);
+    }
+}
+
 int main()
 {
-    int sockfd;
+    signal(SIGINT, sighand);
+    signal(SIGTSTP, sighand);
+
     struct sockaddr_ll sa;
     char buffer[BUFFER_SIZE];
-    ssize_t packet_len;
+    int packet_len;
 
-    // Create a raw socket
+    // raw socket capturing packets at layer 2
     sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (sockfd == -1)
     {
@@ -41,27 +63,34 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    // Set up the sockaddr_ll structure
+    // setting up the sockaddr_ll struct
     memset(&sa, 0, sizeof(struct sockaddr_ll));
     sa.sll_family = AF_PACKET;
     sa.sll_protocol = htons(ETH_P_ALL);
-    sa.sll_ifindex = if_nametoindex("eth0"); 
+    sa.sll_ifindex = if_nametoindex("eth0");
     if (sa.sll_ifindex == 0)
     {
         perror("if_nametoindex");
         exit(EXIT_FAILURE);
     }
 
-    // Bind the socket to the interface
+    // binding the socket to the interface
     if (bind(sockfd, (struct sockaddr *)&sa, sizeof(struct sockaddr_ll)) == -1)
     {
         perror("bind");
         exit(EXIT_FAILURE);
     }
 
-    printf("Enter the server mac address: (xx:xx:xx:xx:xx:xx) ");
+    printf("Enter the Server MAC address: (xx:xx:xx:xx:xx:xx): ");
     unsigned char src_mac[6];
     scanf("%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &src_mac[0], &src_mac[1], &src_mac[2], &src_mac[3], &src_mac[4], &src_mac[5]);
+
+    printf("Enter the Server IP address: (x.x.x.x): ");
+    char src_ip[INET_ADDRSTRLEN];
+    scanf("%s", src_ip);
+
+    long server_ip;
+    inet_pton(AF_INET, src_ip, &server_ip);
 
     // receive packets on this socket
     while (1)
@@ -73,21 +102,15 @@ int main()
             exit(EXIT_FAILURE);
         }
 
-        // extract the source mac address from the ethernet header
+        // extracting the Client MAC address from the packet
         struct ethhdr *eth_head = (struct ethhdr *)buffer;
         unsigned char *dest_mac = eth_head->h_source;
 
-
-
-        // check the ip header
-        // check if destination ip address matches the ip address of the server
+        // checking if destination ip address matches the ip address of the server
         struct iphdr *ip_header = (struct iphdr *)(buffer + sizeof(struct ethhdr));
         struct in_addr dest_addr = {ip_header->daddr};
 
-        char dest_ip[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &dest_addr, dest_ip, INET_ADDRSTRLEN);
-
-        if (strcmp(dest_ip, "127.0.0.1") != 0)
+        if (dest_addr.s_addr != server_ip)
         {
             continue;
         }
@@ -251,7 +274,7 @@ int main()
         ip_header->frag_off = 0;
         ip_header->ttl = 8;
         ip_header->protocol = 254;
-        ip_header->saddr = inet_addr("127.0.0.1");
+        ip_header->saddr = server_ip;
         ip_header->daddr = dest_addr.s_addr;
 
         // adding the sinDNSresponse to the buffer
