@@ -115,8 +115,8 @@ int main()
         for (int t = 0; t < n; t++)
         {
             int l = 0;
-            // extract the value in the query from j to j+3
-            for (int i = 0; i < 4; i++)
+            // extract the value in the query from j to j+4
+            for (int i = 0; i < 5; i++)
             {
                 l = l * 2 + simDNSquery[j] - '0';
                 j++;

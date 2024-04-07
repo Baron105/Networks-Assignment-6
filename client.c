@@ -311,9 +311,9 @@ int main()
                         t++;
                     }
 
-                    // put the len in the 4 bits from j+1 to j+4
+                    // put the len in the 4 bits from j+1 to j+5
                     int temp = len;
-                    int m = 4;
+                    int m = 5;
                     while (m)
                     {
                         simDNSquery[j + m] = '0' + temp % 2;
@@ -321,7 +321,7 @@ int main()
                         m--;
                     }
 
-                    j = j + 5;
+                    j = j + 6;
 
                     // put the domain in the message
                     for (int i = start; i < start + len; i++)
@@ -420,14 +420,14 @@ int main()
                     // check the destination ip address
                     if (ip->daddr != inet_addr("127.0.0.1"))
                     {
-                        printf("Invalid destination IP address\n");
+                        // printf("Invalid destination IP address\n");
                         continue;
                     }
 
                     // check if ip protocol is 254
                     if (ip->protocol != 254)
                     {
-                        printf("Invalid protocol\n");
+                        // printf("Invalid protocol\n");
                         continue;
                     }
 
@@ -467,7 +467,7 @@ int main()
                         continue;
                     }
 
-                    // printf("Query ID : %d\n", responseid);
+                    printf("Query ID : %d\n", responseid);
 
                     // check the number of ip addresses
                     int n = 0;
@@ -485,8 +485,8 @@ int main()
                     while (n--)
                     {
                         length = 0;
-                        // store the value in bits j to j+3 in len
-                        for (int r = 0; r < 4; r++)
+                        // store the value in bits j to j+4 in len
+                        for (int r = 0; r < 5; r++)
                         {
                             length = length * 2 + page_table[t].query[j] - '0';
                             j++;
