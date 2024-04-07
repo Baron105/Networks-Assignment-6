@@ -145,7 +145,7 @@ int main()
         {
             continue;
         }
-        if(dropMessage(P))
+        if (dropMessage(P))
         {
             printf("Dropped Incoming message\n");
             continue;
@@ -269,7 +269,7 @@ int main()
         ip_header->ihl = 5;
         ip_header->version = 4;
         ip_header->tos = 0;
-        ip_header->tot_len = htons(sizeof(struct iphdr)+ strlen(simDNSresponse));
+        ip_header->tot_len = htons(sizeof(struct iphdr) + strlen(simDNSresponse));
         ip_header->id = htons(0);
         ip_header->frag_off = 0;
         ip_header->ttl = 8;

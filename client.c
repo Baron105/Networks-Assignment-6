@@ -168,11 +168,11 @@ int main()
                         memset(sendbuffer, 0, sizeof(sendbuffer));
 
                         // creating the Ethernet header
-                        struct ethhdr *eth = (struct ethhdr *)sendbuffer;  
+                        struct ethhdr *eth = (struct ethhdr *)sendbuffer;
                         // set the destination MAC address in mac
-                        memcpy(eth->h_dest, server_mac, ETH_ALEN);                                                    // Destination MAC address
+                        memcpy(eth->h_dest, server_mac, ETH_ALEN); // Destination MAC address
                         memcpy(eth->h_source, client_mac, ETH_ALEN);
-                        eth->h_proto = htons(ETH_P_IP);                                                         // EtherType for IP
+                        eth->h_proto = htons(ETH_P_IP); // EtherType for IP
 
                         // creating the IP header
                         struct iphdr *ip = (struct iphdr *)(sendbuffer + sizeof(struct ethhdr));
@@ -382,9 +382,9 @@ int main()
 
                 // creating the Ethernet header
                 struct ethhdr *eth = (struct ethhdr *)sendbuffer;
-                memcpy(eth->h_dest, server_mac, ETH_ALEN);                                                    // Destination MAC address
+                memcpy(eth->h_dest, server_mac, ETH_ALEN);   // Destination MAC address
                 memcpy(eth->h_source, client_mac, ETH_ALEN); // Source MAC address
-                eth->h_proto = htons(ETH_P_IP);                                                         // EtherType for IP
+                eth->h_proto = htons(ETH_P_IP);              // EtherType for IP
 
                 // creating the IP header
                 struct iphdr *ip = (struct iphdr *)(sendbuffer + sizeof(struct ethhdr));
