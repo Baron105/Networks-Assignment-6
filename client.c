@@ -36,13 +36,13 @@ void sighand(int signum)
 {
     if (signum == SIGINT)
     {
-        printf("You pressed Ctrl+C, Exiting\n");
+        printf("\nYou pressed Ctrl+C, Exiting\n");
         close(sockfd);
         exit(1);
     }
     else if (signum == SIGTSTP)
     {
-        printf("You pressed Ctrl+Z, Exiting\n");
+        printf("\nYou pressed Ctrl+Z, Exiting\n");
         close(sockfd);
         exit(1);
     }
