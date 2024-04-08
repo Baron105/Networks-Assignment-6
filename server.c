@@ -15,7 +15,7 @@
 // buffer size of 2^16
 #define BUFFER_SIZE 65536
 // probability of dropping a message
-#define P 0.5
+#define P 0.1
 
 // generate a random number between 0 and 1, if it is less than p, return 1, else return 0
 int dropMessage(float p)
