@@ -12,9 +12,9 @@ Run the server using `./server` and the client using `./client` on two different
 
 The server will first of all ask the user the interface name to bind to and the MAC address. We can get the list of interfaces as well as their MAC addresses by running `ifconfig` on the terminal. Please note that the interface name and the MAC address should be entered in the same format as shown by the `ifconfig` command. After this, the server asks the user to enter the IP address of the server. The format to enter all the above fields is clearly mentioned in the prompt.
 
-The server will then wait for the client to send a request. On receiving the request, the server will send a response back to the client. It first runs `gethostbyname` to get the IP addresses associated with the queries (with proper error handling). It also gets the IP address and the MAC address of the client from the request packet and sends it back to the client in the response packet. The server may drop packets (the ones that are actual queries) randomly with a probability of `P` defined in the `simDNSServer.c` file and can be changed as per your need.
+The server will then wait for the client to send a request. On receiving the request, the server will send a response back to the client. It first runs `gethostbyname` to get the IP addresses associated with the queries (with proper error handling). It also gets the IP address and the MAC address of the client from the request packet and sends it back to the client in the response packet. The server may drop packets (the ones that are actual queries) randomly with a probability of `P` defined in the `simDNSServer.c` file and can be changed as per your need (in the `#define P` statement in `simDNSServer.c`).
 
-Note that server drops all the packets with wrong IP and/or Protocol. The server will keep running until the user stops it by pressing `Ctrl+C` or `Ctrl+Z`, upon which it just closes the socket and exits.
+Note that server drops all the packets with wrong IP and/or Protocol. (IP Protocol 254 is used for Experimentation and Testing, as this was mentioned to be found out in the assignment statement). The server will keep running until the user stops it by pressing `Ctrl+C` or `Ctrl+Z`, upon which it just closes the socket and exits.
 
 ### Client
 
@@ -26,4 +26,4 @@ The proper format to enter the query is also mentioned in the prompt. If the use
 
 Note that the client waits on a select on both the socket and the stdin. This is done so that the client can take input from the user and also receive the response from the server. All the packets with wrong IP and/or Protocol are also dropped by the client. On receiving the response, the client will first check if the identifier in the response packet matches the identifier it has stored in the table. If it matches, the client will print the IP addresses along with the domain names we put had put in the queries. If the identifier does not match, the client will print Invalid Response and wait for the next response.
 
-The client will keep running until the user stops it by pressing `Ctrl+C` or `Ctrl+Z`, upon which it just closes the socket and exits. The user can also stop the client by entering `EXIT` in the prompt.
+The client will keep running until the user stops it by pressing `Ctrl+C` or `Ctrl+Z`, upon which it just closes the socket and exits. The user can also stop the client by entering `EXIT` in the prompt which also closes the socket and exits normally.
