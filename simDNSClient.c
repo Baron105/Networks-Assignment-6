@@ -10,6 +10,12 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/select.h>
+#include <limits.h>
+#include <net/if.h>
+#include <sys/types.h>
+#include <time.h>
+#include <signal.h>
 
 #define BUFFER_SIZE 65536
 
@@ -23,11 +29,31 @@ typedef struct page_table_entry
 
 page_table_entry page_table[20];
 
+int sockfd;
+
+// signal handler for SIGINT and SIGTSTP
+void sighand(int signum)
+{
+    if (signum == SIGINT)
+    {
+        printf("\nYou pressed Ctrl+C, Exiting\n");
+        close(sockfd);
+        exit(1);
+    }
+    else if (signum == SIGTSTP)
+    {
+        printf("\nYou pressed Ctrl+Z, Exiting\n");
+        close(sockfd);
+        exit(1);
+    }
+}
+
 int main()
 {
-
+    signal(SIGINT, sighand);
+    signal(SIGTSTP, sighand);
+    srand(time(0));
     memset(page_table, 0, sizeof(page_table));
-    int sockfd;
     struct sockaddr_ll sa;
     char sendbuffer[BUFFER_SIZE] = {'\0'};
     char recvbuffer[BUFFER_SIZE] = {'\0'};
@@ -60,9 +86,31 @@ int main()
         exit(EXIT_FAILURE);
     }
 
+    printf("Enter the MAC address of the Server: (xx:xx:xx:xx:xx:xx): ");
+    unsigned char server_mac[6];
+    scanf("%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &server_mac[0], &server_mac[1], &server_mac[2], &server_mac[3], &server_mac[4], &server_mac[5]);
+
+    printf("Enter the MAC address of the Client: (xx:xx:xx:xx:xx:xx): ");
+    unsigned char client_mac[6];
+    scanf("%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &client_mac[0], &client_mac[1], &client_mac[2], &client_mac[3], &client_mac[4], &client_mac[5]);
+
+    printf("Enter the IP address of the Server: (x.x.x.x): ");
+    char server_ip[INET_ADDRSTRLEN];
+    scanf("%s", server_ip);
+
+    long server_ip_addr;
+    inet_pton(AF_INET, server_ip, &server_ip_addr);
+
+    printf("Enter the IP address of the Client: (x.x.x.x): ");
+    char client_ip[INET_ADDRSTRLEN];
+    scanf("%s", client_ip);
+
+    long client_ip_addr;
+    inet_pton(AF_INET, client_ip, &client_ip_addr);
+
     char simDNSquery[1000] = {'\0'};
 
-    int id = 1;
+    int id = 1001;
 
     fd_set fd;
     FD_ZERO(&fd);
@@ -70,8 +118,8 @@ int main()
     FD_SET(0, &fd);
 
     struct timeval tv;
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
+    tv.tv_sec = 0;
+    tv.tv_usec = 100000;
 
     printf("Enter the query: (getIP N <domain-1> <domain-2> <domain-3> … <domain-N>) or EXIT\n");
 
@@ -89,8 +137,8 @@ int main()
         {
 
             // reset the timer
-            tv.tv_sec = 1;
-            tv.tv_usec = 0;
+            tv.tv_sec = 0;
+            tv.tv_usec = 100000;
 
             for (int i = 0; i < 20; i++)
             {
@@ -106,8 +154,7 @@ int main()
                         {
                             qid = qid * 2 + (page_table[i].query[j] - '0');
                         }
-                        printf("Query ID : %d\n", qid);
-                        printf("Query timed out\n");
+                        printf("\nQuery ID: %d timed out\n\n\n", qid);
 
                         memset(page_table[i].query, 0, sizeof(page_table[i].query));
                         page_table[i].alloted = 0;
@@ -122,9 +169,10 @@ int main()
 
                         // creating the Ethernet header
                         struct ethhdr *eth = (struct ethhdr *)sendbuffer;
-                        memset(eth->h_dest, 0xFF, ETH_ALEN);                                                    // Broadcast MAC address
-                        memcpy(eth->h_source, (unsigned char[]){0x3c, 0xa6, 0xf6, 0x40, 0xc3, 0x6d}, ETH_ALEN); // Source MAC address
-                        eth->h_proto = htons(ETH_P_IP);                                                         // EtherType for IP
+                        // set the destination MAC address in mac
+                        memcpy(eth->h_dest, server_mac, ETH_ALEN); // Destination MAC address
+                        memcpy(eth->h_source, client_mac, ETH_ALEN);
+                        eth->h_proto = htons(ETH_P_IP); // EtherType for IP
 
                         // creating the IP header
                         struct iphdr *ip = (struct iphdr *)(sendbuffer + sizeof(struct ethhdr));
@@ -132,19 +180,20 @@ int main()
                         ip->version = 4;
                         ip->tos = 0;
                         ip->tot_len = htons(sizeof(struct iphdr) + strlen(page_table[i].query));
-                        ip->id = htons(54321);
+                        ip->id = rand() % 10000;
                         ip->frag_off = 0;
                         ip->ttl = 8;
                         ip->protocol = 254;
                         ip->check = 0;
-                        ip->saddr = inet_addr("127.0.0.1");
-                        ip->daddr = inet_addr("127.0.0.1");
+                        ip->saddr = client_ip_addr;
+                        ip->daddr = server_ip_addr;
 
                         // adding the query to the buffer
                         char *data = (char *)(sendbuffer + sizeof(struct ethhdr) + sizeof(struct iphdr));
                         strcpy(data, page_table[i].query);
 
                         // sending the packet
+                        printf("Retransmitting packet with Query id: %d\n", page_table[i].id);
                         int len = sendto(sockfd, sendbuffer, sizeof(struct ethhdr) + sizeof(struct iphdr) + strlen(page_table[i].query), 0, (struct sockaddr *)&sa, sizeof(struct sockaddr_ll));
 
                         if (len == -1)
@@ -223,11 +272,11 @@ int main()
                 int p = 7;
                 int cnt = 0;
 
-                for (int i = 7; i < strlen(query); i++)
+                for (int i = 7; i < strlen(query) + 1; i++)
                 {
-                    if ((query[i] >= 'a' && query[i] <= 'z') || (query[i] >= 'A' && query[i] <= 'Z') || (query[i] >= '0' && query[i] <= '9') || query[i] == '.' || query[i] == '-' || query[i] == ' ')
+                    if ((query[i] >= 'a' && query[i] <= 'z') || (query[i] >= 'A' && query[i] <= 'Z') || (query[i] >= '0' && query[i] <= '9') || query[i] == '.' || query[i] == '-' || query[i] == ' ' || query[i] == '\n' || query[i] == '\0')
                     {
-                        if (query[i] == ' ')
+                        if (query[i] == ' ' || query[i] == '\n' || query[i] == '\0')
                         {
                             if (cnt > 31 || cnt == 1 || cnt == 2)
                             {
@@ -333,9 +382,9 @@ int main()
 
                 // creating the Ethernet header
                 struct ethhdr *eth = (struct ethhdr *)sendbuffer;
-                memset(eth->h_dest, 0xFF, ETH_ALEN);                                                    // Broadcast MAC address
-                memcpy(eth->h_source, (unsigned char[]){0x3c, 0xa6, 0xf6, 0x40, 0xc3, 0x6d}, ETH_ALEN); // Source MAC address
-                eth->h_proto = htons(ETH_P_IP);                                                         // EtherType for IP
+                memcpy(eth->h_dest, server_mac, ETH_ALEN);   // Destination MAC address
+                memcpy(eth->h_source, client_mac, ETH_ALEN); // Source MAC address
+                eth->h_proto = htons(ETH_P_IP);              // EtherType for IP
 
                 // creating the IP header
                 struct iphdr *ip = (struct iphdr *)(sendbuffer + sizeof(struct ethhdr));
@@ -343,13 +392,13 @@ int main()
                 ip->version = 4;
                 ip->tos = 0;
                 ip->tot_len = htons(sizeof(struct iphdr) + strlen(simDNSquery));
-                ip->id = htons(54321);
+                ip->id = rand() % 10000;
                 ip->frag_off = 0;
                 ip->ttl = 8;
                 ip->protocol = 254;
                 ip->check = 0;
-                ip->saddr = inet_addr("127.0.0.1");
-                ip->daddr = inet_addr("127.0.0.1");
+                ip->saddr = client_ip_addr;
+                ip->daddr = server_ip_addr;
 
                 // adding the simDNSquery to the buffer
                 char *data = (char *)(sendbuffer + sizeof(struct ethhdr) + sizeof(struct iphdr));
@@ -364,7 +413,7 @@ int main()
                     exit(EXIT_FAILURE);
                 }
 
-                printf("Sent packet of length %d\n", len);
+                // printf("Sent packet of length %d\n", len);
                 // add it in the page query table
                 // find the first empty slot
                 t = 0;
@@ -411,14 +460,14 @@ int main()
                     struct iphdr *ip = (struct iphdr *)(recvbuffer + sizeof(struct ethhdr));
                     char *data = (char *)(recvbuffer + sizeof(struct ethhdr) + sizeof(struct iphdr));
 
-                    if (ip->saddr != inet_addr("127.0.0.1"))
+                    if (ip->saddr != server_ip_addr)
                     {
                         // printf("Invalid source IP address\n");
                         continue;
                     }
 
                     // check the destination ip address
-                    if (ip->daddr != inet_addr("127.0.0.1"))
+                    if (ip->daddr != client_ip_addr)
                     {
                         // printf("Invalid destination IP address\n");
                         continue;
@@ -467,7 +516,7 @@ int main()
                         continue;
                     }
 
-                    printf("Query ID : %d\n", responseid);
+                    printf("\nQuery ID: %d\n", responseid);
 
                     // check the number of ip addresses
                     int n = 0;
@@ -476,7 +525,7 @@ int main()
                     n = n * 2 + (data[19] - '0');
                     n++;
 
-                    printf("Total query strings : %d\n", n);
+                    printf("Total query strings: %d\n\n", n);
 
                     int j = 20;
                     int k = 20;
@@ -499,7 +548,7 @@ int main()
                             j++;
                         }
 
-                        printf(" ");
+                        printf(": ");
 
                         // get the ip address
                         long ip = 0;
@@ -525,6 +574,7 @@ int main()
                         // print the ip in the required format
                         printf("%ld.%ld.%ld.%ld\n", (ip >> 24) & 255, (ip >> 16) & 255, (ip >> 8) & 255, ip & 255);
                     }
+                    printf("\n\n");
                     // delete the entry from the page table
                     memset(page_table[t].query, 0, sizeof(page_table[t].query));
                     page_table[t].alloted = 0;
