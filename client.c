@@ -272,11 +272,11 @@ int main()
                 int p = 7;
                 int cnt = 0;
 
-                for (int i = 7; i < strlen(query)+1; i++)
+                for (int i = 7; i < strlen(query) + 1; i++)
                 {
                     if ((query[i] >= 'a' && query[i] <= 'z') || (query[i] >= 'A' && query[i] <= 'Z') || (query[i] >= '0' && query[i] <= '9') || query[i] == '.' || query[i] == '-' || query[i] == ' ' || query[i] == '\n' || query[i] == '\0')
                     {
-                        if (query[i] == ' ' || query[i] == '\n'||query[i]=='\0')
+                        if (query[i] == ' ' || query[i] == '\n' || query[i] == '\0')
                         {
                             if (cnt > 31 || cnt == 1 || cnt == 2)
                             {

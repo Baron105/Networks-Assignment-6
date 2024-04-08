@@ -12,9 +12,8 @@
 #include <signal.h>
 #include <limits.h>
 
-// buffer size of 2^16
+// buffer size of 2^16 and drop probability of 0.1
 #define BUFFER_SIZE 65536
-// probability of dropping a message
 #define P 0.1
 
 // generate a random number between 0 and 1, if it is less than p, return 1, else return 0
