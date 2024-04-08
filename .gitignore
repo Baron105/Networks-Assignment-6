@@ -1,3 +1,5 @@
+# Standard gitignore file for C projects provided by GitHub
+
 # Prerequisites
 *.d
 
@@ -50,3 +52,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Local files
+server
+client
