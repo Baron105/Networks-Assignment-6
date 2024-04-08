@@ -14,7 +14,7 @@ The server will first of all ask the user the interface name to bind to and the 
 
 The server will then wait for the client to send a request. On receiving the request, the server will send a response back to the client. It first runs `gethostbyname` to get the IP addresses associated with the queries (with proper error handling). It also gets the IP address and the MAC address of the client from the request packet and sends it back to the client in the response packet. The server may drop packets (the ones that are actual queries) randomly with a probability of `P` defined in the `simDNSServer.c` file and can be changed as per your need (in the `#define P` statement in `simDNSServer.c`).
 
-Note that server drops all the packets with wrong IP and/or Protocol. (IP Protocol 254 is used for Experimentation and Testing, as this was mentioned to be found out in the assignment statement). The server will keep running until the user stops it by pressing `Ctrl+C` or `Ctrl+Z`, upon which it just closes the socket and exits.
+Note that server drops all the packets with wrong IP and/or Protocol. *(IP Protocol 254 is used for Experimentation and Testing, as this was mentioned to be found out in the assignment statement)*. The server will keep running until the user stops it by pressing `Ctrl+C` or `Ctrl+Z`, upon which it just closes the socket and exits.
 
 ### Client
 

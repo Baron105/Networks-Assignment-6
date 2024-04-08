@@ -126,8 +126,8 @@ int main()
     FD_SET(0, &fd);
 
     struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = 100000;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
 
     printf("Enter the query: (getIP N <domain-1> <domain-2> <domain-3> … <domain-N>) or EXIT\n");
 
@@ -145,8 +145,8 @@ int main()
         {
 
             // reset the timer
-            tv.tv_sec = 0;
-            tv.tv_usec = 100000;
+            tv.tv_sec = 1;
+            tv.tv_usec = 0;
 
             for (int i = 0; i < 20; i++)
             {
