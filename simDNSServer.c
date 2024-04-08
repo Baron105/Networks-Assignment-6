@@ -62,11 +62,16 @@ int main()
         exit(EXIT_FAILURE);
     }
 
+    printf("Specify the interface to sniff on: (eth0|lo|eno1): ");
+    char interface[10]={'\0'};
+    scanf("%s", interface);
+
+    
     // setting up the sockaddr_ll struct
     memset(&sa, 0, sizeof(struct sockaddr_ll));
     sa.sll_family = AF_PACKET;
     sa.sll_protocol = htons(ETH_P_ALL);
-    sa.sll_ifindex = if_nametoindex("eth0");
+    sa.sll_ifindex = if_nametoindex(interface);
     if (sa.sll_ifindex == 0)
     {
         perror("if_nametoindex");

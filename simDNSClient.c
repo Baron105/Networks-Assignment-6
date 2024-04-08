@@ -75,24 +75,37 @@ int main()
         exit(EXIT_FAILURE);
     }
 
+    printf("Specify the interface to sniff on: (eth0|lo|eno1): ");
+    char interface[10]={'\0'};
+    scanf("%s", interface);
+
     // Set up the sockaddr_ll structure
     memset(&sa, 0, sizeof(struct sockaddr_ll));
     sa.sll_family = AF_PACKET;
     sa.sll_protocol = htons(ETH_P_ALL);
-    sa.sll_ifindex = if_nametoindex("eth0");
+    sa.sll_ifindex = if_nametoindex(interface);
     if (sa.sll_ifindex == 0)
     {
         perror("if_nametoindex");
         exit(EXIT_FAILURE);
     }
 
-    printf("Enter the MAC address of the Server: (xx:xx:xx:xx:xx:xx): ");
-    unsigned char server_mac[6];
-    scanf("%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &server_mac[0], &server_mac[1], &server_mac[2], &server_mac[3], &server_mac[4], &server_mac[5]);
+    
 
     printf("Enter the MAC address of the Client: (xx:xx:xx:xx:xx:xx): ");
     unsigned char client_mac[6];
     scanf("%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &client_mac[0], &client_mac[1], &client_mac[2], &client_mac[3], &client_mac[4], &client_mac[5]);
+
+    printf("Enter the IP address of the Client: (x.x.x.x): ");
+    char client_ip[INET_ADDRSTRLEN];
+    scanf("%s", client_ip);
+
+    long client_ip_addr;
+    inet_pton(AF_INET, client_ip, &client_ip_addr);
+
+    printf("Enter the MAC address of the Server: (xx:xx:xx:xx:xx:xx): ");
+    unsigned char server_mac[6];
+    scanf("%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &server_mac[0], &server_mac[1], &server_mac[2], &server_mac[3], &server_mac[4], &server_mac[5]);
 
     printf("Enter the IP address of the Server: (x.x.x.x): ");
     char server_ip[INET_ADDRSTRLEN];
@@ -101,12 +114,7 @@ int main()
     long server_ip_addr;
     inet_pton(AF_INET, server_ip, &server_ip_addr);
 
-    printf("Enter the IP address of the Client: (x.x.x.x): ");
-    char client_ip[INET_ADDRSTRLEN];
-    scanf("%s", client_ip);
-
-    long client_ip_addr;
-    inet_pton(AF_INET, client_ip, &client_ip_addr);
+    
 
     char simDNSquery[1000] = {'\0'};
 
@@ -413,7 +421,6 @@ int main()
                     exit(EXIT_FAILURE);
                 }
 
-                // printf("Sent packet of length %d\n", len);
                 // add it in the page query table
                 // find the first empty slot
                 t = 0;
@@ -483,7 +490,7 @@ int main()
                     // check if the message is a response
                     if (data[16] != '1')
                     {
-                        printf("Not a query response packet\n");
+                        // printf("Not a query response packet\n");
                         continue;
                     }
 
@@ -496,7 +503,6 @@ int main()
                         responseid = responseid * 2 + (data[i] - '0');
                     }
 
-                    // printf("id : %d\n", responseid);
 
                     // check if the id is valid in the table
                     int t = 0;
@@ -512,7 +518,7 @@ int main()
 
                     if (t >= 20)
                     {
-                        printf("Invalid id\n");
+                        // printf("Invalid id\n");
                         continue;
                     }
 
